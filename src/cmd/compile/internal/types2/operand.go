@@ -30,6 +30,7 @@ const (
 	commaok                      // like value, but operand may be used in a comma,ok expression
 	commaerr                     // like commaok, but second value is error, not boolean
 	cgofunc                      // operand is a cgo function
+	variantok                    // operand is a non-atom union variant selector; it must be used in a comma,ok expression
 )
 
 var operandModeString = [...]string{
@@ -45,6 +46,7 @@ var operandModeString = [...]string{
 	commaok:   "comma, ok expression",
 	commaerr:  "comma, error expression",
 	cgofunc:   "cgo function",
+	variantok: "union variant selector",
 }
 
 // An operand represents an intermediate value during type checking.
@@ -254,6 +256,8 @@ func compositeKind(typ Type) string {
 		return "slice"
 	case *Struct:
 		return "struct"
+	case *Sum:
+		return "union"
 	case *Pointer:
 		return "pointer"
 	case *Signature:

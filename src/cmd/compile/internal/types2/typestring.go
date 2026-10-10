@@ -181,6 +181,18 @@ func (w *typeWriter) typ(typ Type) {
 		}
 		w.byte('}')
 
+	case *Sum:
+		w.string("union{")
+		for i, v := range t.variants {
+			if i > 0 {
+				w.byte(';')
+			}
+			w.string(v.name)
+			w.byte(' ')
+			w.typ(v.typ)
+		}
+		w.byte('}')
+
 	case *Pointer:
 		w.byte('*')
 		w.typ(t.base)

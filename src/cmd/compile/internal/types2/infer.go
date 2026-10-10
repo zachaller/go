@@ -581,6 +581,9 @@ func (w *tpWalker) isParameterized(typ Type) (res bool) {
 	case *Struct:
 		return w.varList(t.fields)
 
+	case *Sum:
+		return w.varList(t.variants)
+
 	case *Pointer:
 		return w.isParameterized(t.base)
 
@@ -736,6 +739,9 @@ func (w *cycleFinder) typ(typ Type) {
 
 	case *Struct:
 		w.varList(t.fields)
+
+	case *Sum:
+		w.varList(t.variants)
 
 	case *Pointer:
 		w.typ(t.base)

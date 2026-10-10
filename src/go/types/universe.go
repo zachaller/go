@@ -11,6 +11,7 @@ package types
 
 import (
 	"go/constant"
+	"internal/buildcfg"
 	"strings"
 )
 
@@ -107,6 +108,14 @@ func defPredeclaredTypes() {
 	{
 		obj := NewTypeName(nopos, nil, "any", nil)
 		NewAlias(obj, &emptyInterface)
+		def(obj)
+	}
+
+	// type atom = struct{}
+	// (only with GOEXPERIMENT=uniontypes; see sum.go)
+	if buildcfg.Experiment.UnionTypes {
+		obj := NewTypeName(nopos, nil, "atom", nil)
+		NewAlias(obj, &emptyStruct)
 		def(obj)
 	}
 

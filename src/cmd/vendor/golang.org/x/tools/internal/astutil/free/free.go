@@ -104,6 +104,11 @@ func (v *freeVisitor) Visit(n ast.Node) ast.Visitor {
 		defer v.closeScope()
 		v.walkFieldList(n.Fields)
 
+	case *ast.UnionType:
+		v.openScope()
+		defer v.closeScope()
+		v.walkFieldList(n.Variants)
+
 	case *ast.FuncType:
 		v.openScope()
 		defer v.closeScope()
@@ -190,6 +195,24 @@ func (v *freeVisitor) Visit(n ast.Node) ast.Visitor {
 		v.walk(n.Assign)
 		// We can use walkBody here because we don't track label scopes.
 		v.walkBody(n.Body)
+
+	case *ast.UnionSwitchStmt:
+		v.openScope()
+		defer v.closeScope()
+		if n.Init != nil {
+			v.walk(n.Init)
+		}
+		v.walk(n.X)
+		if n.Lhs != nil {
+			v.declare(n.Lhs)
+		}
+		// Case lists name union variants, which cannot be free.
+		for _, c := range n.Body.List {
+			cc := c.(*ast.CaseClause)
+			v.openScope()
+			walkSlice(v, cc.Body)
+			v.closeScope()
+		}
 
 	case *ast.CommClause:
 		v.openScope()

@@ -1,0 +1,23 @@
+pkg go/ast, method (*UnionSwitchStmt) End() token.Pos #76920
+pkg go/ast, method (*UnionSwitchStmt) Pos() token.Pos #76920
+pkg go/ast, method (*UnionType) End() token.Pos #76920
+pkg go/ast, method (*UnionType) Pos() token.Pos #76920
+pkg go/ast, type UnionSwitchStmt struct #76920
+pkg go/ast, type UnionSwitchStmt struct, Body *BlockStmt #76920
+pkg go/ast, type UnionSwitchStmt struct, Init Stmt #76920
+pkg go/ast, type UnionSwitchStmt struct, Lhs *Ident #76920
+pkg go/ast, type UnionSwitchStmt struct, Rparen token.Pos #76920
+pkg go/ast, type UnionSwitchStmt struct, Switch token.Pos #76920
+pkg go/ast, type UnionSwitchStmt struct, X Expr #76920
+pkg go/ast, type UnionType struct #76920
+pkg go/ast, type UnionType struct, Incomplete bool #76920
+pkg go/ast, type UnionType struct, Union token.Pos #76920
+pkg go/ast, type UnionType struct, Variants *FieldList #76920
+pkg go/types, func NewSum([]*Var) *Sum #76920
+pkg go/types, method (*Sum) IsAtom(int) bool #76920
+pkg go/types, method (*Sum) NumVariants() int #76920
+pkg go/types, method (*Sum) String() string #76920
+pkg go/types, method (*Sum) Underlying() Type #76920
+pkg go/types, method (*Sum) Variant(int) *Var #76920
+pkg go/types, method (*Sum) VariantIndex(string) int #76920
+pkg go/types, type Sum struct #76920

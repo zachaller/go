@@ -71,6 +71,8 @@ const (
 	nTypeSwitchStmt
 	nUnaryExpr
 	nValueSpec
+	nUnionType       // Go fork addition (GOEXPERIMENT=uniontypes)
+	nUnionSwitchStmt // Go fork addition (GOEXPERIMENT=uniontypes)
 )
 
 // typeOf returns a distinct single-bit value that represents the type of n.
@@ -211,6 +213,10 @@ func typeOf(n ast.Node) uint64 {
 		return 1 << nUnaryExpr
 	case *ast.ValueSpec:
 		return 1 << nValueSpec
+	case *ast.UnionType:
+		return 1 << nUnionType
+	case *ast.UnionSwitchStmt:
+		return 1 << nUnionSwitchStmt
 	}
 	return 0
 }

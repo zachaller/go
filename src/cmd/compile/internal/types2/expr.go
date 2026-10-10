@@ -1162,7 +1162,12 @@ func (check *Checker) exprInternal(T *target, x *operand, e syntax.Expr) exprKin
 		x.typ_ = T
 
 	case *syntax.TypeSwitchGuard:
-		// x.(type) expressions are handled explicitly in type switches
+		// x.(type) and x.(union) expressions are handled explicitly in type and union switches
+		if e.Union {
+			check.error(e, BadTypeKeyword, "use of .(union) outside union switch")
+			check.use(e.X)
+			goto Error
+		}
 		check.error(e, InvalidSyntaxTree, "use of .(type) outside type switch")
 		check.use(e.X)
 		goto Error
@@ -1381,7 +1386,10 @@ func (check *Checker) multiExpr(e syntax.Expr, allowCommaOk bool) (list []*opera
 
 	// exactly one (possibly invalid or comma-ok) value
 	list = []*operand{&x}
-	if allowCommaOk && (x.mode() == mapindex || x.mode() == commaok || x.mode() == commaerr) {
+	if x.mode() == variantok && !allowCommaOk {
+		check.singleValue(&x) // report error
+	}
+	if allowCommaOk && (x.mode() == mapindex || x.mode() == commaok || x.mode() == commaerr || x.mode() == variantok) {
 		var what string = "ok value of (comma, ok) expression"
 		var typ Type = Typ[UntypedBool]
 		if x.mode() == commaerr {
@@ -1393,6 +1401,9 @@ func (check *Checker) multiExpr(e syntax.Expr, allowCommaOk bool) (list []*opera
 		x2 := &operand{mode_: value, expr: dummy, typ_: typ}
 		list = append(list, x2)
 		commaOk = true
+		if x.mode() == variantok {
+			x.mode_ = value // the variant value is an ordinary value
+		}
 	}
 
 	return
@@ -1455,6 +1466,11 @@ func (check *Checker) exclude(x *operand, modeset uint) {
 
 // singleValue reports an error if x describes a tuple and sets x.mode to invalid.
 func (check *Checker) singleValue(x *operand) {
+	if x.mode() == variantok {
+		check.errorf(x, TooManyValues, "union variant selector %s must be used in a comma-ok assignment (v, ok := %s)", x.expr, x.expr)
+		x.invalidate()
+		return
+	}
 	if x.mode() == value {
 		// tuple types are never named - no need for underlying type below
 		if t, ok := x.typ().(*Tuple); ok {

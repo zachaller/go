@@ -456,6 +456,12 @@ func childrenOf(n ast.Node) []ast.Node {
 	case *ast.StructType:
 		children = append(children, tok(n.Struct, len("struct")))
 
+	case *ast.UnionType:
+		children = append(children, tok(n.Union, len("union")))
+
+	case *ast.UnionSwitchStmt:
+		children = append(children, tok(n.Switch, len("switch")))
+
 	case *ast.SwitchStmt:
 		children = append(children, tok(n.Switch, len("switch")))
 
@@ -648,6 +654,10 @@ func NodeDescription(n ast.Node) string {
 		return "type specification"
 	case *ast.TypeSwitchStmt:
 		return "type switch"
+	case *ast.UnionType:
+		return "union type"
+	case *ast.UnionSwitchStmt:
+		return "union switch"
 	case *ast.UnaryExpr:
 		return fmt.Sprintf("unary %s operation", n.Op)
 	case *ast.ValueSpec:

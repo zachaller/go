@@ -423,7 +423,11 @@ func (p *printer) printRawNode(n Node) {
 		if n.Lhs != nil {
 			p.print(n.Lhs, blank, _Define, blank)
 		}
-		p.print(n.X, _Dot, _Lparen, _Type, _Rparen)
+		if n.Union {
+			p.print(n.X, _Dot, _Lparen, _Name, "union", _Rparen)
+		} else {
+			p.print(n.X, _Dot, _Lparen, _Type, _Rparen)
+		}
 
 	case *CallExpr:
 		p.print(n.Fun, _Lparen)
@@ -480,6 +484,23 @@ func (p *printer) printRawNode(n Node) {
 				p.print(outdent, newline)
 			} else {
 				p.printFieldList(n.FieldList, n.TagList, _Semi)
+			}
+		}
+		p.print(_Rbrace)
+
+	case *UnionType:
+		p.print(_Name, "union")
+		if len(n.VariantList) > 0 && p.linebreaks {
+			p.print(blank)
+		}
+		p.print(_Lbrace)
+		if len(n.VariantList) > 0 {
+			if p.linebreaks {
+				p.print(newline, indent)
+				p.printFieldList(n.VariantList, nil, _Semi)
+				p.print(outdent, newline)
+			} else {
+				p.printFieldList(n.VariantList, nil, _Semi)
 			}
 		}
 		p.print(_Rbrace)

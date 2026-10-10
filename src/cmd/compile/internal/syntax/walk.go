@@ -191,6 +191,9 @@ func (w walker) node(n Node) {
 			}
 		}
 
+	case *UnionType:
+		w.fieldList(n.VariantList)
+
 	case *Field:
 		if n.Name != nil {
 			w.node(n.Name)

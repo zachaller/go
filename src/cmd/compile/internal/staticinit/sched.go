@@ -118,11 +118,16 @@ func (s *Schedule) tryStaticInit(curfunc *ir.Func, n ir.Node) bool {
 	case ir.OAS2:
 		// Usually OAS2 has been rewritten to separate OASes by types2.
 		// What's left here is "var a, b = tmp1, tmp2" as a result from rewriting
-		// "var a, b = f()" that needs type conversion, which is not static.
+		// "var a, b = f()" that needs type conversion, which is not static,
+		// or "var v, ok = u.V" for a union variant selector (GOEXPERIMENT=uniontypes),
+		// which is not static either.
 		n := n.(*ir.AssignListStmt)
 		for _, rhs := range n.Rhs {
-			for rhs.Op() == ir.OCONVNOP || rhs.Op() == ir.OCONVIFACE {
+			for rhs.Op() == ir.OCONVNOP || rhs.Op() == ir.OCONVIFACE || rhs.Op() == ir.OCONV {
 				rhs = rhs.(*ir.ConvExpr).X
+			}
+			if len(rhs.Init()) != 0 {
+				return false // union variant selector
 			}
 			if name, ok := rhs.(*ir.Name); !ok || !name.AutoTemp() {
 				base.FatalfAt(n.Pos(), "unexpected rhs, not an autotmp: %+v", rhs)

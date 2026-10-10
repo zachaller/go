@@ -457,6 +457,16 @@ type (
 		Incomplete bool       // true if (source) fields are missing in the Fields list
 	}
 
+	// A UnionType node represents a union (sum) type
+	// (GOEXPERIMENT=uniontypes, go.dev/issue/76920).
+	// "union" is not a keyword: it introduces a union type only
+	// if it is followed by an opening brace.
+	UnionType struct {
+		Union      token.Pos  // position of "union"
+		Variants   *FieldList // list of variant declarations
+		Incomplete bool       // true if (source) variants are missing in the Variants list
+	}
+
 	// Pointer types are represented via StarExpr nodes.
 
 	// A FuncType node represents a function type.
@@ -516,6 +526,7 @@ func (x *BinaryExpr) Pos() token.Pos     { return x.X.Pos() }
 func (x *KeyValueExpr) Pos() token.Pos   { return x.Key.Pos() }
 func (x *ArrayType) Pos() token.Pos      { return x.Lbrack }
 func (x *StructType) Pos() token.Pos     { return x.Struct }
+func (x *UnionType) Pos() token.Pos      { return x.Union }
 func (x *FuncType) Pos() token.Pos {
 	if x.Func.IsValid() || x.Params == nil { // see issue 3870
 		return x.Func
@@ -558,6 +569,7 @@ func (x *BinaryExpr) End() token.Pos     { return x.Y.End() }
 func (x *KeyValueExpr) End() token.Pos   { return x.Value.End() }
 func (x *ArrayType) End() token.Pos      { return x.Elt.End() }
 func (x *StructType) End() token.Pos     { return x.Fields.End() }
+func (x *UnionType) End() token.Pos      { return x.Variants.End() }
 func (x *FuncType) End() token.Pos {
 	if x.Results != nil {
 		return x.Results.End()
@@ -590,6 +602,7 @@ func (*KeyValueExpr) exprNode()   {}
 
 func (*ArrayType) exprNode()     {}
 func (*StructType) exprNode()    {}
+func (*UnionType) exprNode()     {}
 func (*FuncType) exprNode()      {}
 func (*InterfaceType) exprNode() {}
 func (*MapType) exprNode()       {}
@@ -748,6 +761,21 @@ type (
 		Body   *BlockStmt // CaseClauses only
 	}
 
+	// A UnionSwitchStmt node represents a union switch statement
+	// (GOEXPERIMENT=uniontypes, go.dev/issue/76920):
+	//
+	//	switch [Init;] [Lhs :=] X.(union) Body
+	//
+	// The case lists of the CaseClauses in Body are variant names.
+	UnionSwitchStmt struct {
+		Switch token.Pos  // position of "switch" keyword
+		Init   Stmt       // initialization statement; or nil
+		Lhs    *Ident     // variable declared by "Lhs :="; or nil
+		X      Expr       // union value
+		Rparen token.Pos  // position of ")" in ".(union)"
+		Body   *BlockStmt // CaseClauses only
+	}
+
 	// A CommClause node represents a case of a select statement.
 	CommClause struct {
 		Case  token.Pos // position of "case" or "default" keyword
@@ -785,27 +813,28 @@ type (
 
 // Pos and End implementations for statement nodes.
 
-func (s *BadStmt) Pos() token.Pos        { return s.From }
-func (s *DeclStmt) Pos() token.Pos       { return s.Decl.Pos() }
-func (s *EmptyStmt) Pos() token.Pos      { return s.Semicolon }
-func (s *LabeledStmt) Pos() token.Pos    { return s.Label.Pos() }
-func (s *ExprStmt) Pos() token.Pos       { return s.X.Pos() }
-func (s *SendStmt) Pos() token.Pos       { return s.Chan.Pos() }
-func (s *IncDecStmt) Pos() token.Pos     { return s.X.Pos() }
-func (s *AssignStmt) Pos() token.Pos     { return s.Lhs[0].Pos() }
-func (s *GoStmt) Pos() token.Pos         { return s.Go }
-func (s *DeferStmt) Pos() token.Pos      { return s.Defer }
-func (s *ReturnStmt) Pos() token.Pos     { return s.Return }
-func (s *BranchStmt) Pos() token.Pos     { return s.TokPos }
-func (s *BlockStmt) Pos() token.Pos      { return s.Lbrace }
-func (s *IfStmt) Pos() token.Pos         { return s.If }
-func (s *CaseClause) Pos() token.Pos     { return s.Case }
-func (s *SwitchStmt) Pos() token.Pos     { return s.Switch }
-func (s *TypeSwitchStmt) Pos() token.Pos { return s.Switch }
-func (s *CommClause) Pos() token.Pos     { return s.Case }
-func (s *SelectStmt) Pos() token.Pos     { return s.Select }
-func (s *ForStmt) Pos() token.Pos        { return s.For }
-func (s *RangeStmt) Pos() token.Pos      { return s.For }
+func (s *BadStmt) Pos() token.Pos         { return s.From }
+func (s *DeclStmt) Pos() token.Pos        { return s.Decl.Pos() }
+func (s *EmptyStmt) Pos() token.Pos       { return s.Semicolon }
+func (s *LabeledStmt) Pos() token.Pos     { return s.Label.Pos() }
+func (s *ExprStmt) Pos() token.Pos        { return s.X.Pos() }
+func (s *SendStmt) Pos() token.Pos        { return s.Chan.Pos() }
+func (s *IncDecStmt) Pos() token.Pos      { return s.X.Pos() }
+func (s *AssignStmt) Pos() token.Pos      { return s.Lhs[0].Pos() }
+func (s *GoStmt) Pos() token.Pos          { return s.Go }
+func (s *DeferStmt) Pos() token.Pos       { return s.Defer }
+func (s *ReturnStmt) Pos() token.Pos      { return s.Return }
+func (s *BranchStmt) Pos() token.Pos      { return s.TokPos }
+func (s *BlockStmt) Pos() token.Pos       { return s.Lbrace }
+func (s *IfStmt) Pos() token.Pos          { return s.If }
+func (s *CaseClause) Pos() token.Pos      { return s.Case }
+func (s *SwitchStmt) Pos() token.Pos      { return s.Switch }
+func (s *TypeSwitchStmt) Pos() token.Pos  { return s.Switch }
+func (s *UnionSwitchStmt) Pos() token.Pos { return s.Switch }
+func (s *CommClause) Pos() token.Pos      { return s.Case }
+func (s *SelectStmt) Pos() token.Pos      { return s.Select }
+func (s *ForStmt) Pos() token.Pos         { return s.For }
+func (s *RangeStmt) Pos() token.Pos       { return s.For }
 
 func (s *BadStmt) End() token.Pos  { return s.To }
 func (s *DeclStmt) End() token.Pos { return s.Decl.End() }
@@ -857,8 +886,9 @@ func (s *CaseClause) End() token.Pos {
 	}
 	return s.Colon + 1
 }
-func (s *SwitchStmt) End() token.Pos     { return s.Body.End() }
-func (s *TypeSwitchStmt) End() token.Pos { return s.Body.End() }
+func (s *SwitchStmt) End() token.Pos      { return s.Body.End() }
+func (s *TypeSwitchStmt) End() token.Pos  { return s.Body.End() }
+func (s *UnionSwitchStmt) End() token.Pos { return s.Body.End() }
 func (s *CommClause) End() token.Pos {
 	if n := len(s.Body); n > 0 {
 		return s.Body[n-1].End()
@@ -871,27 +901,28 @@ func (s *RangeStmt) End() token.Pos  { return s.Body.End() }
 
 // stmtNode() ensures that only statement nodes can be
 // assigned to a Stmt.
-func (*BadStmt) stmtNode()        {}
-func (*DeclStmt) stmtNode()       {}
-func (*EmptyStmt) stmtNode()      {}
-func (*LabeledStmt) stmtNode()    {}
-func (*ExprStmt) stmtNode()       {}
-func (*SendStmt) stmtNode()       {}
-func (*IncDecStmt) stmtNode()     {}
-func (*AssignStmt) stmtNode()     {}
-func (*GoStmt) stmtNode()         {}
-func (*DeferStmt) stmtNode()      {}
-func (*ReturnStmt) stmtNode()     {}
-func (*BranchStmt) stmtNode()     {}
-func (*BlockStmt) stmtNode()      {}
-func (*IfStmt) stmtNode()         {}
-func (*CaseClause) stmtNode()     {}
-func (*SwitchStmt) stmtNode()     {}
-func (*TypeSwitchStmt) stmtNode() {}
-func (*CommClause) stmtNode()     {}
-func (*SelectStmt) stmtNode()     {}
-func (*ForStmt) stmtNode()        {}
-func (*RangeStmt) stmtNode()      {}
+func (*BadStmt) stmtNode()         {}
+func (*DeclStmt) stmtNode()        {}
+func (*EmptyStmt) stmtNode()       {}
+func (*LabeledStmt) stmtNode()     {}
+func (*ExprStmt) stmtNode()        {}
+func (*SendStmt) stmtNode()        {}
+func (*IncDecStmt) stmtNode()      {}
+func (*AssignStmt) stmtNode()      {}
+func (*GoStmt) stmtNode()          {}
+func (*DeferStmt) stmtNode()       {}
+func (*ReturnStmt) stmtNode()      {}
+func (*BranchStmt) stmtNode()      {}
+func (*BlockStmt) stmtNode()       {}
+func (*IfStmt) stmtNode()          {}
+func (*CaseClause) stmtNode()      {}
+func (*SwitchStmt) stmtNode()      {}
+func (*TypeSwitchStmt) stmtNode()  {}
+func (*UnionSwitchStmt) stmtNode() {}
+func (*CommClause) stmtNode()      {}
+func (*SelectStmt) stmtNode()      {}
+func (*ForStmt) stmtNode()         {}
+func (*RangeStmt) stmtNode()       {}
 
 // ----------------------------------------------------------------------------
 // Declarations

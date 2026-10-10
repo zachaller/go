@@ -108,6 +108,10 @@ func importMap(imports []*types.Package) map[string]*types.Package {
 			for field := range T.Fields() {
 				addObj(field)
 			}
+		case *types.Sum: // Go fork addition (GOEXPERIMENT=uniontypes)
+			for i := 0; i < T.NumVariants(); i++ {
+				addObj(T.Variant(i))
+			}
 		case *types.Tuple:
 			for v := range T.Variables() {
 				addObj(v)

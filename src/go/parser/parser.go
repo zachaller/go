@@ -761,6 +761,34 @@ func (p *parser) parseStructType() *ast.StructType {
 	}
 }
 
+// parseUnionType parses a union type; the "union" name at
+// position pos has already been consumed.
+func (p *parser) parseUnionType(pos token.Pos) *ast.UnionType {
+	if p.trace {
+		defer un(trace(p, "UnionType"))
+	}
+
+	lbrace := p.expect(token.LBRACE)
+	var list []*ast.Field
+	for p.tok == token.IDENT {
+		doc := p.leadComment
+		names := p.parseIdentList()
+		typ := p.parseType()
+		comment := p.expectSemi()
+		list = append(list, &ast.Field{Doc: doc, Names: names, Type: typ, Comment: comment})
+	}
+	rbrace := p.expect(token.RBRACE)
+
+	return &ast.UnionType{
+		Union: pos,
+		Variants: &ast.FieldList{
+			Opening: lbrace,
+			List:    list,
+			Closing: rbrace,
+		},
+	}
+}
+
 func (p *parser) parsePointerType() *ast.StarExpr {
 	if p.trace {
 		defer un(trace(p, "PointerType"))
@@ -1374,7 +1402,16 @@ func (p *parser) tryIdentOrType() ast.Expr {
 
 	switch p.tok {
 	case token.IDENT:
-		typ := p.parseTypeName(nil)
+		var ident *ast.Ident
+		if p.lit == "union" {
+			// "union" is not a keyword: it introduces a union type
+			// only if it is followed by an opening brace.
+			ident = p.parseIdent()
+			if p.tok == token.LBRACE {
+				return p.parseUnionType(ident.NamePos)
+			}
+		}
+		typ := p.parseTypeName(ident)
 		if p.tok == token.LBRACK {
 			typ = p.parseTypeInstance(typ)
 		}
@@ -2193,7 +2230,41 @@ func (p *parser) parseCaseClause() *ast.CaseClause {
 
 func isTypeSwitchAssert(x ast.Expr) bool {
 	a, ok := x.(*ast.TypeAssertExpr)
-	return ok && a.Type == nil
+	return ok && (a.Type == nil || isUnionSwitchAssert(a))
+}
+
+// isUnionSwitchAssert reports whether a is the guard x.(union)
+// of a union switch (GOEXPERIMENT=uniontypes).
+func isUnionSwitchAssert(a *ast.TypeAssertExpr) bool {
+	id, ok := a.Type.(*ast.Ident)
+	return ok && id.Name == "union"
+}
+
+// unionSwitch returns the union switch with the given guard s2,
+// or nil if s2 is not the guard of a union switch.
+func (p *parser) unionSwitch(pos token.Pos, s1, s2 ast.Stmt, body *ast.BlockStmt) *ast.UnionSwitchStmt {
+	var lhs ast.Expr
+	var rhs ast.Expr
+	switch t := s2.(type) {
+	case *ast.ExprStmt:
+		rhs = t.X
+	case *ast.AssignStmt:
+		lhs, rhs = t.Lhs[0], t.Rhs[0]
+	}
+	a, _ := rhs.(*ast.TypeAssertExpr)
+	if a == nil || !isUnionSwitchAssert(a) {
+		return nil
+	}
+	s := &ast.UnionSwitchStmt{Switch: pos, Init: s1, X: a.X, Rparen: a.Rparen, Body: body}
+	if lhs != nil {
+		id, ok := lhs.(*ast.Ident)
+		if !ok {
+			p.errorExpected(lhs.Pos(), "identifier on left side of :=")
+			id = &ast.Ident{NamePos: lhs.Pos(), Name: "_"}
+		}
+		s.Lhs = id
+	}
+	return s
 }
 
 func (p *parser) isTypeSwitchGuard(s ast.Stmt) bool {
@@ -2265,6 +2336,9 @@ func (p *parser) parseSwitchStmt() ast.Stmt {
 	body := &ast.BlockStmt{Lbrace: lbrace, List: list, Rbrace: rbrace}
 
 	if typeSwitch {
+		if s := p.unionSwitch(pos, s1, s2, body); s != nil {
+			return s
+		}
 		return &ast.TypeSwitchStmt{Switch: pos, Init: s1, Assign: s2, Body: body}
 	}
 

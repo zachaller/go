@@ -58,6 +58,7 @@ const (
 	TypeInterface
 	TypeUnion
 	TypeTypeParam
+	TypeSum // union (sum) type; GOEXPERIMENT=uniontypes (Go fork addition)
 )
 
 // A CodeObj distinguishes among go/types.Object encodings.

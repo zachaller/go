@@ -180,6 +180,13 @@ func comparableType(T Type, dynamic bool, seen map[Type]bool) *typeError {
 			}
 		}
 
+	case *Sum:
+		for _, v := range t.variants {
+			if comparableType(v.typ, dynamic, seen) != nil {
+				return typeErrorf("union containing %s cannot be compared", v.typ)
+			}
+		}
+
 	case *Array:
 		if comparableType(t.elem, dynamic, seen) != nil {
 			return typeErrorf("%s cannot be compared", T)
@@ -295,6 +302,23 @@ func (c *comparer) identical(x, y Type, p *ifacePair) bool {
 						!c.ignoreTags && x.Tag(i) != y.Tag(i) ||
 						!f.sameId(g.pkg, g.name, false) ||
 						!c.identical(f.typ, g.typ, p) {
+						return false
+					}
+				}
+				return true
+			}
+		}
+
+	case *Sum:
+		// Two union types are identical if they have the same sequence of
+		// variants, and if corresponding variants have the same names and
+		// identical types. Lower-case variant names from different packages
+		// are always different.
+		if y, ok := y.(*Sum); ok {
+			if len(x.variants) == len(y.variants) {
+				for i, f := range x.variants {
+					g := y.variants[i]
+					if !f.sameId(g.pkg, g.name, false) || !c.identical(f.typ, g.typ, p) {
 						return false
 					}
 				}

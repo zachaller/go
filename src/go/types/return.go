@@ -57,6 +57,9 @@ func (check *Checker) isTerminating(s ast.Stmt, label string) bool {
 	case *ast.TypeSwitchStmt:
 		return check.isTerminatingSwitch(s.Body, label)
 
+	case *ast.UnionSwitchStmt:
+		return check.isTerminatingSwitch(s.Body, label)
+
 	case *ast.SelectStmt:
 		for _, s := range s.Body.List {
 			cc := s.(*ast.CommClause)
@@ -148,6 +151,11 @@ func hasBreak(s ast.Stmt, label string, implicit bool) bool {
 		}
 
 	case *ast.TypeSwitchStmt:
+		if label != "" && hasBreak(s.Body, label, false) {
+			return true
+		}
+
+	case *ast.UnionSwitchStmt:
 		if label != "" && hasBreak(s.Body, label, false) {
 			return true
 		}

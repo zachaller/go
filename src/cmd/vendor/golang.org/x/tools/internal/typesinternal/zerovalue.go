@@ -62,7 +62,7 @@ func ZeroString(t types.Type, qual types.Qualifier) (_ string, isValid bool) {
 
 	case *types.Named:
 		switch under := t.Underlying().(type) {
-		case *types.Struct, *types.Array:
+		case *types.Struct, *types.Array, *types.Sum:
 			return types.TypeString(t, qual) + "{}", true
 		default:
 			return ZeroString(under, qual)
@@ -70,7 +70,7 @@ func ZeroString(t types.Type, qual types.Qualifier) (_ string, isValid bool) {
 
 	case *types.Alias:
 		switch t.Underlying().(type) {
-		case *types.Struct, *types.Array:
+		case *types.Struct, *types.Array, *types.Sum:
 			return types.TypeString(t, qual) + "{}", true
 		default:
 			// A type parameter can have alias but alias type's underlying type
@@ -81,7 +81,7 @@ func ZeroString(t types.Type, qual types.Qualifier) (_ string, isValid bool) {
 			return ZeroString(types.Unalias(t), qual)
 		}
 
-	case *types.Array, *types.Struct:
+	case *types.Array, *types.Struct, *types.Sum:
 		return types.TypeString(t, qual) + "{}", true
 
 	case *types.TypeParam:
@@ -155,7 +155,7 @@ func ZeroExpr(t types.Type, qual types.Qualifier) (_ ast.Expr, isValid bool) {
 
 	case *types.Named:
 		switch under := t.Underlying().(type) {
-		case *types.Struct, *types.Array:
+		case *types.Struct, *types.Array, *types.Sum:
 			return &ast.CompositeLit{
 				Type: TypeExpr(t, qual),
 			}, true
@@ -165,7 +165,7 @@ func ZeroExpr(t types.Type, qual types.Qualifier) (_ ast.Expr, isValid bool) {
 
 	case *types.Alias:
 		switch t.Underlying().(type) {
-		case *types.Struct, *types.Array:
+		case *types.Struct, *types.Array, *types.Sum:
 			return &ast.CompositeLit{
 				Type: TypeExpr(t, qual),
 			}, true
@@ -173,7 +173,7 @@ func ZeroExpr(t types.Type, qual types.Qualifier) (_ ast.Expr, isValid bool) {
 			return ZeroExpr(types.Unalias(t), qual)
 		}
 
-	case *types.Array, *types.Struct:
+	case *types.Array, *types.Struct, *types.Sum:
 		return &ast.CompositeLit{
 			Type: TypeExpr(t, qual),
 		}, true
@@ -327,7 +327,7 @@ func TypeExpr(t types.Type, qual types.Qualifier) ast.Expr {
 
 		return expr
 
-	case *types.Struct:
+	case *types.Struct, *types.Sum:
 		return ast.NewIdent(types.TypeString(t, qual))
 
 	case *types.Interface:

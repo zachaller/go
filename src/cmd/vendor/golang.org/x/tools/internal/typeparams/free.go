@@ -63,6 +63,13 @@ func (w *Free) Has(typ types.Type) (res bool) {
 			}
 		}
 
+	case *types.Sum: // Go fork addition (GOEXPERIMENT=uniontypes)
+		for i, n := 0, t.NumVariants(); i < n; i++ {
+			if w.Has(t.Variant(i).Type()) {
+				return true
+			}
+		}
+
 	case *types.Pointer:
 		return w.Has(t.Elem())
 

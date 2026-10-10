@@ -212,6 +212,11 @@ func (check *Checker) lhsVar(lhs ast.Expr) Type {
 	}
 
 	var x operand
+	if sel, _ := ast.Unparen(lhs).(*ast.SelectorExpr); sel != nil {
+		// sel may be a union variant selector v.V (see unionSelector)
+		defer func(old *ast.SelectorExpr) { check.unionLHS = old }(check.unionLHS)
+		check.unionLHS = sel
+	}
 	check.expr(nil, &x, lhs)
 
 	if v != nil {
@@ -479,6 +484,11 @@ func (check *Checker) assignVars(lhs, orig_rhs []ast.Expr) {
 	if l > 1 {
 		context = "multiple assignment"
 	}
+
+	// Union variant assignments (v.V = x) are only permitted in
+	// single assignments.
+	defer func(old bool) { check.unionAssignOk = old }(check.unionAssignOk)
+	check.unionAssignOk = l == 1 && r == 1
 
 	// If l == 1 and the rhs is a single call, for a better
 	// error message don't handle it as n:n mapping below.

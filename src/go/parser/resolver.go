@@ -336,6 +336,11 @@ func (r *resolver) Visit(node ast.Node) ast.Visitor {
 		defer r.closeScope()
 		r.walkFieldList(n.Fields, ast.Var)
 
+	case *ast.UnionType:
+		r.openScope(n.Pos())
+		defer r.closeScope()
+		r.walkFieldList(n.Variants, ast.Var)
+
 	case *ast.FuncType:
 		r.openScope(n.Pos())
 		defer r.closeScope()
@@ -443,6 +448,30 @@ func (r *resolver) Visit(node ast.Node) ast.Visitor {
 		// scope.
 		if n.Body != nil {
 			r.walkStmts(n.Body.List)
+		}
+
+	case *ast.UnionSwitchStmt:
+		if n.Init != nil {
+			r.openScope(n.Pos())
+			defer r.closeScope()
+			ast.Walk(r, n.Init)
+		}
+		ast.Walk(r, n.X)
+		r.openScope(n.X.Pos())
+		defer r.closeScope()
+		if n.Lhs != nil {
+			r.declare(n, nil, r.topScope, ast.Var, n.Lhs)
+		}
+		// The case lists of union switches are variant names,
+		// which are not resolved.
+		if n.Body != nil {
+			for _, s := range n.Body.List {
+				if cc, ok := s.(*ast.CaseClause); ok {
+					r.openScope(cc.Pos())
+					r.walkStmts(cc.Body)
+					r.closeScope()
+				}
+			}
 		}
 
 	case *ast.CommClause:

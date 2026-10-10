@@ -241,9 +241,12 @@ type (
 
 	// X.(type)
 	// Lhs := X.(type)
+	// X.(union)
+	// Lhs := X.(union)
 	TypeSwitchGuard struct {
-		Lhs *Name // nil means no Lhs :=
-		X   Expr  // X.(type)
+		Lhs   *Name // nil means no Lhs :=
+		X     Expr  // X.(type) or X.(union)
+		Union bool  // X.(union): switch over the variants of a union value
 		expr
 	}
 
@@ -291,6 +294,12 @@ type (
 	StructType struct {
 		FieldList []*Field
 		TagList   []*BasicLit // i >= len(TagList) || TagList[i] == nil means no tag for field i
+		expr
+	}
+
+	// union { VariantList[0]; VariantList[1]; ... }
+	UnionType struct {
+		VariantList []*Field // all variants are named
 		expr
 	}
 

@@ -28,6 +28,7 @@ const (
 	stmtFor
 	stmtSwitch
 	stmtSelect
+	stmtUnionSwitch // GOEXPERIMENT=uniontypes
 )
 
 // A codeExpr distinguishes among expression encodings.
@@ -63,6 +64,12 @@ const (
 	exprRecv
 	exprReshape
 	exprRuntimeBuiltin // a reference to a runtime function from transformed syntax. Followed by string name, e.g., "panicrangeexit"
+
+	// Union (sum) type operations; GOEXPERIMENT=uniontypes.
+	exprUnionLit   // T{V: x} or T.V
+	exprUnionIs    // x.V for atom variant V
+	exprUnionGet   // value of x.V in "v, ok = x.V"
+	exprUnionGetOk // ok of x.V in "v, ok = x.V"; must follow exprUnionGet
 )
 
 type codeAssign int

@@ -153,6 +153,37 @@ func (check *Checker) compositeLit(T *target, x *operand, e *syntax.CompositeLit
 	}
 
 	switch u, _ := commonUnder(base, nil); utyp := u.(type) {
+	case *Sum:
+		// A union literal has at most one element, which must be keyed
+		// with a variant name: T{V: value}.
+		for i, e := range e.ElemList {
+			kv, _ := e.(*syntax.KeyValueExpr)
+			if kv == nil {
+				check.genericExpr(nil, x, e)
+				check.error(e, MixedStructLit, "union literal elements must be keyed with a variant name")
+				continue
+			}
+			if i > 0 {
+				check.genericExpr(nil, x, kv.Value)
+				check.errorf(kv, InvalidStructLit, "too many elements in union literal of type %s", base)
+				continue
+			}
+			key, _ := kv.Key.(*syntax.Name)
+			j := -1
+			if key != nil {
+				j = utyp.lookupVariant(check.pkg, key.Value)
+			}
+			if j < 0 {
+				check.genericExpr(nil, x, kv.Value)
+				check.errorf(kv.Key, MissingLitField, "unknown variant %s in union literal of type %s", kv.Key, base)
+				continue
+			}
+			v := utyp.variants[j]
+			check.genericExpr(newTarget(v.typ, "union variant"), x, kv.Value)
+			check.recordUse(key, v)
+			check.assignment(x, v.typ, "union literal")
+		}
+
 	case *Struct:
 		if len(e.ElemList) == 0 {
 			break

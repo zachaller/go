@@ -117,6 +117,11 @@ func ForEachElement(methodSetOf func(types.Type) *types.MethodSet, T types.Type,
 				visit(T.Field(i).Type(), true)
 			}
 
+		case *types.Sum: // Go fork addition (GOEXPERIMENT=uniontypes)
+			for i, n := 0, T.NumVariants(); i < n; i++ {
+				visit(T.Variant(i).Type(), true)
+			}
+
 		case *types.Tuple:
 			for i, n := 0, T.Len(); i < n; i++ {
 				visit(T.At(i).Type(), true)

@@ -158,6 +158,10 @@ func (f *Finder) exprN(e ast.Expr) types.Type {
 		// y, ok := <-x
 		f.expr(e.X)
 
+	case *ast.SelectorExpr: // must be union variant selector (GOEXPERIMENT=uniontypes)
+		// y, ok := x.V
+		f.expr(e.X)
+
 	default:
 		panic(e)
 	}
@@ -402,6 +406,22 @@ func (f *Finder) expr(e ast.Expr) types.Type {
 					elem := elem.(*ast.KeyValueExpr)
 					f.assign(T.Key(), f.expr(elem.Key))
 					f.assign(T.Elem(), f.expr(elem.Value))
+				}
+
+			case *types.Sum:
+				// Go fork addition (GOEXPERIMENT=uniontypes): T{V: x}
+				for _, elem := range e.Elts {
+					kv, ok := elem.(*ast.KeyValueExpr)
+					if !ok {
+						f.expr(elem)
+						continue
+					}
+					id, ok := kv.Key.(*ast.Ident)
+					if !ok || f.info.Uses[id] == nil {
+						f.expr(kv.Value)
+						continue
+					}
+					f.assign(f.info.Uses[id].Type(), f.expr(kv.Value))
 				}
 
 			case *types.Array, *types.Slice:
@@ -671,6 +691,18 @@ func (f *Finder) stmt(s ast.Stmt) {
 				f.compare(tag, f.info.Types[cond].Type)
 			}
 			for _, s := range cc.Body {
+				f.stmt(s)
+			}
+		}
+
+	case *ast.UnionSwitchStmt:
+		// Go fork addition (GOEXPERIMENT=uniontypes).
+		if s.Init != nil {
+			f.stmt(s.Init)
+		}
+		f.expr(s.X)
+		for _, cc := range s.Body.List {
+			for _, s := range cc.(*ast.CaseClause).Body {
 				f.stmt(s)
 			}
 		}

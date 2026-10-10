@@ -144,6 +144,9 @@ func Walk(v Visitor, node Node) {
 	case *StructType:
 		Walk(v, n.Fields)
 
+	case *UnionType:
+		Walk(v, n.Variants)
+
 	case *FuncType:
 		if n.TypeParams != nil {
 			Walk(v, n.TypeParams)
@@ -238,6 +241,16 @@ func Walk(v Visitor, node Node) {
 			Walk(v, n.Init)
 		}
 		Walk(v, n.Assign)
+		Walk(v, n.Body)
+
+	case *UnionSwitchStmt:
+		if n.Init != nil {
+			Walk(v, n.Init)
+		}
+		if n.Lhs != nil {
+			Walk(v, n.Lhs)
+		}
+		Walk(v, n.X)
 		Walk(v, n.Body)
 
 	case *CommClause:

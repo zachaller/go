@@ -292,7 +292,20 @@ func (r *reader) doTyp() (res types2.Type) {
 		return r.interfaceType()
 	case pkgbits.TypeUnion:
 		return r.unionType()
+	case pkgbits.TypeSum:
+		return r.sumType()
 	}
+}
+
+func (r *reader) sumType() *types2.Sum {
+	_ = r.pkg() // package of tag field; not needed here
+	variants := make([]*types2.Var, r.Len())
+	for i := range variants {
+		pos := r.pos()
+		pkg, name := r.selector()
+		variants[i] = types2.NewField(pos, pkg, name, r.typ(), false)
+	}
+	return types2.NewSum(variants)
 }
 
 func (r *reader) structType() *types2.Struct {

@@ -133,4 +133,8 @@ type Flags struct {
 
 	// CgoBindings enables specifying cgo bindings using the go types they bind to.
 	CgoBindings bool
+
+	// UnionTypes enables union (sum) types in the language,
+	// as described in go.dev/issue/76920.
+	UnionTypes bool
 }

@@ -55,6 +55,8 @@ func (s *StdSizes) Alignof(T Type) (result int64) {
 	// For arrays and structs, alignment is defined in terms
 	// of alignment of the elements and fields, respectively.
 	switch t := T.Underlying().(type) {
+	case *Sum:
+		return s.Alignof(t.layout())
 	case *Array:
 		// spec: "For a variable x of array type: unsafe.Alignof(x)
 		// is the same as unsafe.Alignof(x[0]), but at least 1."
@@ -225,6 +227,8 @@ func (s *StdSizes) Sizeof(T Type) int64 {
 		return ea*n1 + esize // may still overflow to < 0 which is ok
 	case *Slice:
 		return s.WordSize * 3
+	case *Sum:
+		return s.Sizeof(t.layout())
 	case *Struct:
 		n := t.NumFields()
 		if n == 0 {

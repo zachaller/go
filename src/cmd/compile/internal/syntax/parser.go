@@ -757,7 +757,7 @@ func extractName(x Expr, force bool) (*Name, Expr) {
 // The result is false if x could be a type element OR an ordinary (value) expression.
 func isTypeElem(x Expr) bool {
 	switch x := x.(type) {
-	case *ArrayType, *StructType, *FuncType, *InterfaceType, *SliceType, *MapType, *ChanType:
+	case *ArrayType, *StructType, *UnionType, *FuncType, *InterfaceType, *SliceType, *MapType, *ChanType:
 		return true
 	case *Operation:
 		return isTypeElem(x.X) || (x.Y != nil && isTypeElem(x.Y)) || x.Op == Tilde
@@ -1136,6 +1136,24 @@ loop:
 					t.pos = pos
 					t.X = x
 					x = t
+				} else if p.tok == _Name && p.lit == "union" {
+					// X.(union) is a union switch guard; anything else
+					// starting with the name "union" is a type assertion.
+					name := p.name()
+					if p.tok == _Rparen {
+						t := new(TypeSwitchGuard)
+						// t.Lhs is filled in by parser.simpleStmt
+						t.pos = pos
+						t.X = x
+						t.Union = true
+						x = t
+					} else {
+						t := new(AssertExpr)
+						t.pos = pos
+						t.X = x
+						t.Type = p.qualifiedName(name)
+						x = t
+					}
 				} else {
 					t := new(AssertExpr)
 					t.pos = pos
@@ -1406,6 +1424,15 @@ func (p *parser) typeOrNil() Expr {
 		return p.interfaceType()
 
 	case _Name:
+		if p.lit == "union" {
+			// "union" is not a keyword: it introduces a union type
+			// only if it is followed by an opening brace.
+			name := p.name()
+			if p.tok == _Lbrace {
+				return p.unionType(pos)
+			}
+			return p.qualifiedName(name)
+		}
 		return p.qualifiedName(nil)
 
 	case _Lparen:
@@ -1541,6 +1568,45 @@ func (p *parser) structType() *StructType {
 	p.want(_Lbrace)
 	p.list("struct type", _Semi, _Rbrace, func() bool {
 		p.fieldDecl(typ)
+		return false
+	})
+
+	return typ
+}
+
+// UnionType   = "union" "{" { VariantDecl ";" } "}" .
+// VariantDecl = IdentifierList Type .
+//
+// The "union" name has already been consumed.
+func (p *parser) unionType(pos Pos) *UnionType {
+	if trace {
+		defer p.trace("unionType")()
+	}
+
+	typ := new(UnionType)
+	typ.pos = pos
+
+	p.want(_Lbrace)
+	p.list("union type", _Semi, _Rbrace, func() bool {
+		if p.tok != _Name {
+			p.syntaxError("expected variant name")
+			p.advance(_Semi, _Rbrace)
+			return false
+		}
+		names := p.nameList(p.name())
+		t := p.typeOrNil()
+		if t == nil {
+			p.syntaxError("expected variant type")
+			p.advance(_Semi, _Rbrace)
+			t = p.badExpr()
+		}
+		for _, name := range names {
+			f := new(Field)
+			f.pos = name.Pos()
+			f.Name = name
+			f.Type = t
+			typ.VariantList = append(typ.VariantList, f)
+		}
 		return false
 	})
 

@@ -134,6 +134,19 @@ func walk(v *visitor, ek edge.Kind, index int, node ast.Node) {
 	case *ast.StructType:
 		walk(v, edge.StructType_Fields, -1, n.Fields)
 
+	case *ast.UnionType:
+		walk(v, edge.UnionType_Variants, -1, n.Variants)
+
+	case *ast.UnionSwitchStmt:
+		if n.Init != nil {
+			walk(v, edge.UnionSwitchStmt_Init, -1, n.Init)
+		}
+		if n.Lhs != nil {
+			walk(v, edge.UnionSwitchStmt_Lhs, -1, n.Lhs)
+		}
+		walk(v, edge.UnionSwitchStmt_X, -1, n.X)
+		walk(v, edge.UnionSwitchStmt_Body, -1, n.Body)
+
 	case *ast.FuncType:
 		if n.TypeParams != nil {
 			walk(v, edge.FuncType_TypeParams, -1, n.TypeParams)

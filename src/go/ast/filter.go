@@ -163,6 +163,11 @@ func filterType(typ Expr, f Filter, export bool) bool {
 			t.Incomplete = true
 		}
 		return len(t.Fields.List) > 0
+	case *UnionType:
+		if filterFieldList(t.Variants, f, export) {
+			t.Incomplete = true
+		}
+		return len(t.Variants.List) > 0
 	case *FuncType:
 		b1 := filterParamList(t.Params, f, export)
 		b2 := filterParamList(t.Results, f, export)

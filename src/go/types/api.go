@@ -305,6 +305,7 @@ type Info struct {
 	//     *ast.IfStmt
 	//     *ast.SwitchStmt
 	//     *ast.TypeSwitchStmt
+	//     *ast.UnionSwitchStmt
 	//     *ast.CaseClause
 	//     *ast.CommClause
 	//     *ast.ForStmt
@@ -406,7 +407,7 @@ func (tv TypeAndValue) IsBuiltin() bool {
 // nil Value.
 func (tv TypeAndValue) IsValue() bool {
 	switch tv.mode {
-	case constant_, variable, mapindex, value, commaok, commaerr:
+	case constant_, variable, mapindex, value, commaok, commaerr, variantok:
 		return true
 	}
 	return false
@@ -433,7 +434,7 @@ func (tv TypeAndValue) Assignable() bool {
 // HasOk reports whether the corresponding expression may be
 // used on the rhs of a comma-ok assignment.
 func (tv TypeAndValue) HasOk() bool {
-	return tv.mode == commaok || tv.mode == mapindex
+	return tv.mode == commaok || tv.mode == mapindex || tv.mode == variantok
 }
 
 // Instance reports the type arguments and instantiated type for type and

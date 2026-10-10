@@ -150,6 +150,8 @@ type Checker struct {
 	brokenAliases map[*TypeName]bool        // set of aliases with broken (not yet determined) types
 	unionTypeSets map[*Union]*_TypeSet      // computed type sets for union types
 	usedVars      map[*Var]bool             // set of used variables
+	unionLHS      *ast.SelectorExpr         // if set, the union variant selector on the lhs of the current assignment
+	unionAssignOk bool                      // if set, unionLHS may be assigned to
 	usedPkgNames  map[*PkgName]bool         // set of used package names
 	mono          monoGraph                 // graph for detecting non-monomorphizable instantiation loops
 

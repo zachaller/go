@@ -382,7 +382,21 @@ func (r *reader) doTyp() (res types.Type) {
 		return r.interfaceType()
 	case pkgbits.TypeUnion:
 		return r.unionType()
+	case pkgbits.TypeSum:
+		return r.sumType()
 	}
+}
+
+// sumType reads a union (sum) type (GOEXPERIMENT=uniontypes).
+func (r *reader) sumType() *types.Sum {
+	_ = r.pkg() // package of tag field; not needed here
+	variants := make([]*types.Var, r.Len())
+	for i := range variants {
+		pos := r.pos()
+		pkg, name := r.selector()
+		variants[i] = types.NewField(pos, pkg, name, r.typ(), false)
+	}
+	return types.NewSum(variants)
 }
 
 func (r *reader) structType() *types.Struct {

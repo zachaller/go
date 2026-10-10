@@ -619,7 +619,9 @@ func (check *Checker) stmt(ctxt stmtContext, s syntax.Stmt) {
 
 		check.simpleStmt(s.Init)
 
-		if g, _ := s.Tag.(*syntax.TypeSwitchGuard); g != nil {
+		if g, _ := s.Tag.(*syntax.TypeSwitchGuard); g != nil && g.Union {
+			check.unionSwitchStmt(inner|inTypeSwitch, s, g)
+		} else if g != nil {
 			check.typeSwitchStmt(inner|inTypeSwitch, s, g)
 		} else {
 			check.switchStmt(inner, s)

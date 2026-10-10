@@ -788,6 +788,14 @@ func (check *Checker) stmt(ctxt stmtContext, s ast.Stmt) {
 			}
 		}
 
+	case *ast.UnionSwitchStmt:
+		inner |= breakOk | inTypeSwitch
+		check.openScope(s, "union switch")
+		defer check.closeScope()
+
+		check.simpleStmt(s.Init)
+		check.unionSwitchStmt(inner, s)
+
 	case *ast.SelectStmt:
 		inner |= breakOk
 

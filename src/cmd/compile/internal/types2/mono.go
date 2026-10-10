@@ -255,6 +255,10 @@ func (w *monoGraph) assign(pkg *Package, pos syntax.Pos, tpar *TypeParam, targ T
 			for i := 0; i < typ.NumFields(); i++ {
 				do(typ.Field(i).Type())
 			}
+		case *Sum:
+			for _, v := range typ.variants {
+				do(v.Type())
+			}
 		}
 	}
 	do(targ)

@@ -166,6 +166,13 @@ const (
 	ValueSpec_Type
 	ValueSpec_Values
 
+	// Go fork addition: union types (GOEXPERIMENT=uniontypes).
+	UnionType_Variants
+	UnionSwitchStmt_Init
+	UnionSwitchStmt_Lhs
+	UnionSwitchStmt_X
+	UnionSwitchStmt_Body
+
 	maxKind
 )
 
@@ -296,4 +303,9 @@ var fieldInfos = [...]fieldInfo{
 	ValueSpec_Names:       info[*ast.ValueSpec]("Names"),
 	ValueSpec_Type:        info[*ast.ValueSpec]("Type"),
 	ValueSpec_Values:      info[*ast.ValueSpec]("Values"),
+	UnionType_Variants:    info[*ast.UnionType]("Variants"),
+	UnionSwitchStmt_Init:  info[*ast.UnionSwitchStmt]("Init"),
+	UnionSwitchStmt_Lhs:   info[*ast.UnionSwitchStmt]("Lhs"),
+	UnionSwitchStmt_X:     info[*ast.UnionSwitchStmt]("X"),
+	UnionSwitchStmt_Body:  info[*ast.UnionSwitchStmt]("Body"),
 }

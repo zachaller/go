@@ -1016,6 +1016,12 @@ func (w *exportWriter) doTyp(t types.Type, pkg *types.Package) {
 	}
 	switch t := t.(type) {
 	case *types.Alias:
+		if t.Obj().Pkg() == nil && t.Obj().Name() == "atom" {
+			// Go fork addition: the predeclared alias atom = struct{}
+			// (GOEXPERIMENT=uniontypes) is not in the predeclared list.
+			w.doTyp(types.Unalias(t), pkg)
+			return
+		}
 		if targs := t.TypeArgs(); targs.Len() > 0 {
 			w.startType(instanceType)
 			w.pos(t.Obj().Pos())
@@ -1163,6 +1169,23 @@ func (w *exportWriter) doTyp(t types.Type, pkg *types.Package) {
 			term := t.Term(i)
 			w.bool(term.Tilde())
 			w.typ(term.Type(), pkg)
+		}
+
+	case *types.Sum:
+		// Go fork addition (GOEXPERIMENT=uniontypes).
+		w.startType(sumType)
+		n := t.NumVariants()
+		variantPkg := t.Variant(0).Pkg()
+		w.pkg(variantPkg)
+		w.uint64(uint64(n))
+		for i := range n {
+			v := t.Variant(i)
+			if w.p.shallow {
+				w.objectPath(v)
+			}
+			w.pos(v.Pos())
+			w.string(v.Name()) // unexported variants implicitly qualified by prior setPkg
+			w.typ(v.Type(), variantPkg)
 		}
 
 	default:

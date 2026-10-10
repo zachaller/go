@@ -294,6 +294,9 @@ func (a *application) apply(parent ast.Node, name string, iter *iterator, n ast.
 	case *ast.StructType:
 		a.apply(n, "Fields", nil, n.Fields)
 
+	case *ast.UnionType:
+		a.apply(n, "Variants", nil, n.Variants)
+
 	case *ast.FuncType:
 		if tparams := n.TypeParams; tparams != nil {
 			a.apply(n, "TypeParams", nil, tparams)
@@ -372,6 +375,12 @@ func (a *application) apply(parent ast.Node, name string, iter *iterator, n ast.
 	case *ast.TypeSwitchStmt:
 		a.apply(n, "Init", nil, n.Init)
 		a.apply(n, "Assign", nil, n.Assign)
+		a.apply(n, "Body", nil, n.Body)
+
+	case *ast.UnionSwitchStmt:
+		a.apply(n, "Init", nil, n.Init)
+		a.apply(n, "Lhs", nil, n.Lhs)
+		a.apply(n, "X", nil, n.X)
 		a.apply(n, "Body", nil, n.Body)
 
 	case *ast.CommClause:

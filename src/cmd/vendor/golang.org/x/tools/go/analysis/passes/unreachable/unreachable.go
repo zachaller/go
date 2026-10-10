@@ -156,6 +156,12 @@ func (d *deadState) findLabels(stmt ast.Stmt) {
 		d.findLabels(x.Body)
 		d.breakTarget = outer
 
+	case *ast.UnionSwitchStmt:
+		outer := d.breakTarget
+		d.breakTarget = x
+		d.findLabels(x.Body)
+		d.breakTarget = outer
+
 	case *ast.CommClause:
 		for _, stmt := range x.Body {
 			d.findLabels(stmt)
@@ -312,6 +318,25 @@ func (d *deadState) findDead(stmt ast.Stmt) {
 		d.reachable = anyReachable || d.hasBreak[x] || !hasDefault
 
 	case *ast.TypeSwitchStmt:
+		anyReachable := false
+		hasDefault := false
+		for _, cas := range x.Body.List {
+			cc := cas.(*ast.CaseClause)
+			if cc.List == nil {
+				hasDefault = true
+			}
+			d.reachable = true
+			for _, stmt := range cc.Body {
+				d.findDead(stmt)
+			}
+			anyReachable = anyReachable || d.reachable
+		}
+		d.reachable = anyReachable || d.hasBreak[x] || !hasDefault
+
+	case *ast.UnionSwitchStmt:
+		// Go fork addition (GOEXPERIMENT=uniontypes).
+		// Union switches without default clauses are exhaustive, but
+		// treat them conservatively like other switches.
 		anyReachable := false
 		hasDefault := false
 		for _, cas := range x.Body.List {

@@ -73,6 +73,7 @@ const (
 	instanceType
 	unionType
 	aliasType
+	sumType // Go fork addition: union (sum) types (GOEXPERIMENT=uniontypes)
 )
 
 // Object tags
@@ -1020,6 +1021,25 @@ func (r *importReader) doType(base *types.Named) (res types.Type) {
 			terms[i] = types.NewTerm(r.bool(), r.typ())
 		}
 		return types.NewUnion(terms)
+
+	case sumType:
+		// Go fork addition (GOEXPERIMENT=uniontypes).
+		variantPkg := r.pkg()
+		variants := make([]*types.Var, r.uint64())
+		for i := range variants {
+			var v *types.Var
+			if r.p.shallow {
+				v, _ = r.objectPathObject().(*types.Var)
+			}
+			vpos := r.pos()
+			vname := r.ident()
+			vtyp := r.typ()
+			if v == nil {
+				v = types.NewField(vpos, variantPkg, vname, vtyp, false)
+			}
+			variants[i] = v
+		}
+		return types.NewSum(variants)
 	}
 }
 

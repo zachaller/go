@@ -137,6 +137,11 @@ func WriteExpr(buf *bytes.Buffer, x ast.Expr) {
 		writeFieldList(buf, x.Fields.List, "; ", false)
 		buf.WriteByte('}')
 
+	case *ast.UnionType:
+		buf.WriteString("union{")
+		writeFieldList(buf, x.Variants.List, "; ", false)
+		buf.WriteByte('}')
+
 	case *ast.FuncType:
 		buf.WriteString("func")
 		writeSigExpr(buf, x)

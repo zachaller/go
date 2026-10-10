@@ -237,6 +237,12 @@ func EndPos(n Node) Pos {
 			}
 			return n.Pos()
 			// TODO(gri) need to take TagList into account
+		case *UnionType:
+			if l := lastField(n.VariantList); l != nil {
+				m = l
+				continue
+			}
+			return n.Pos()
 		case *Field:
 			if n.Type != nil {
 				m = n.Type

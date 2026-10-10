@@ -630,6 +630,21 @@ func (u *unifier) nify(x, y Type, mode unifyMode, p *ifacePair) (result bool) {
 			}
 		}
 
+	case *Sum:
+		// Two union types unify if they have the same sequence of variants,
+		// and if corresponding variants have the same names and their types unify.
+		if y, ok := y.(*Sum); ok {
+			if len(x.variants) == len(y.variants) {
+				for i, f := range x.variants {
+					g := y.variants[i]
+					if !f.sameId(g.pkg, g.name, false) || !u.nify(f.typ, g.typ, emode, p) {
+						return false
+					}
+				}
+				return true
+			}
+		}
+
 	case *Pointer:
 		// Two pointer types unify if their base types unify.
 		if y, ok := y.(*Pointer); ok {

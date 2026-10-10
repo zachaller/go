@@ -191,6 +191,11 @@ func forEachLastStmt(stmts []ast.Stmt, onLast func(last ast.Stmt)) {
 			cc := c.(*ast.CaseClause)
 			forEachLastStmt(cc.Body, onLast)
 		}
+	case *ast.UnionSwitchStmt:
+		for _, c := range s.Body.List {
+			cc := c.(*ast.CaseClause)
+			forEachLastStmt(cc.Body, onLast)
+		}
 	case *ast.SelectStmt:
 		for _, c := range s.Body.List {
 			cc := c.(*ast.CommClause)

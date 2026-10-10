@@ -515,7 +515,7 @@ func (pw *pkgWriter) typIdx(typ types2.Type, dict *writerDict) typeInfo {
 	// (e.g., "main.C" for both of the local type aliases in
 	// test/fixedbugs/issue50190.go).
 	for {
-		if alias, ok := typ.(*types2.Alias); ok && !isGlobal(alias.Obj()) {
+		if alias, ok := typ.(*types2.Alias); ok && (!isGlobal(alias.Obj()) || isAtomAlias(alias)) {
 			typ = alias.Rhs()
 		} else {
 			break
@@ -618,6 +618,10 @@ func (pw *pkgWriter) typIdx(typ types2.Type, dict *writerDict) typeInfo {
 	case *types2.Union:
 		w.Code(pkgbits.TypeUnion)
 		w.unionType(typ)
+
+	case *types2.Sum:
+		w.Code(pkgbits.TypeSum)
+		w.sumType(typ)
 	}
 
 	if w.derived {
@@ -1490,6 +1494,11 @@ func (w *writer) stmt1(stmt syntax.Stmt) {
 		w.implicitConvExpr(chanType.Elem(), stmt.Value)
 
 	case *syntax.SwitchStmt:
+		if guard, ok := stmt.Tag.(*syntax.TypeSwitchGuard); ok && guard.Union {
+			w.Code(stmtUnionSwitch)
+			w.unionSwitchStmt(stmt, guard)
+			break
+		}
 		w.Code(stmtSwitch)
 		w.switchStmt(stmt)
 	}
@@ -1548,6 +1557,10 @@ func (w *writer) declStmt(decl syntax.Decl) {
 func (w *writer) assignStmt(pos poser, lhs0, rhs0 syntax.Expr) {
 	lhs := syntax.UnpackListExpr(lhs0)
 	rhs := syntax.UnpackListExpr(rhs0)
+
+	if len(lhs) == 1 && len(rhs) == 1 && w.unionAssign(pos, lhs[0], rhs[0]) {
+		return
+	}
 
 	w.Code(stmtAssign)
 	w.pos(pos)
@@ -1966,6 +1979,15 @@ func (w *writer) expr(expr syntax.Expr) {
 		w.p.unexpected("expression", expr)
 
 	case *syntax.CompositeLit:
+		typ := w.p.typeOf(expr)
+		ptr, isPtr := types2.CoreType(typ).(*types2.Pointer)
+		if isPtr {
+			typ = ptr.Elem()
+		}
+		if _, ok := types2.CoreType(typ).(*types2.Sum); ok {
+			w.unionCompLit(expr, typ, isPtr)
+			break
+		}
 		w.Code(exprCompLit)
 		w.compLit(expr)
 
@@ -1974,6 +1996,11 @@ func (w *writer) expr(expr syntax.Expr) {
 		w.funcLit(expr)
 
 	case *syntax.SelectorExpr:
+		if u, ok := w.p.unionSel(expr); ok {
+			w.unionSelExpr(u)
+			break
+		}
+
 		sel, ok := w.p.info.Selections[expr]
 		assert(ok)
 
@@ -2406,6 +2433,10 @@ func (w *writer) methodExpr(expr *syntax.SelectorExpr, recv types2.Type, sel *ty
 // an f(g()) call, or the RHS operand in a comma-ok assignment).
 func (w *writer) multiExpr(pos poser, dstType func(int) types2.Type, exprs []syntax.Expr) {
 	w.Sync(pkgbits.SyncMultiExpr)
+
+	if len(exprs) == 1 && w.unionCommaOk(dstType, exprs[0]) {
+		return
+	}
 
 	if len(exprs) == 1 {
 		expr := exprs[0]
@@ -2988,6 +3019,12 @@ func (w *writer) pkgInitOrder() {
 		for _, v := range init.Lhs {
 			w.obj(v, nil)
 		}
+		// var v, ok = u.V (union variant selector; GOEXPERIMENT=uniontypes)
+		if u, ok := w.p.unionSel(init.Rhs); w.Bool(ok && len(init.Lhs) == 2 && !u.isType) {
+			dstType := func(i int) types2.Type { return init.Lhs[i].Type() }
+			w.multiExpr(init.Rhs, dstType, []syntax.Expr{init.Rhs})
+			continue
+		}
 		w.expr(init.Rhs)
 	}
 }
@@ -3155,6 +3192,13 @@ func isDefinedType(obj types2.Object) bool {
 // isGlobal reports whether obj was declared at package scope.
 //
 // Caveat: blank objects are not declared.
+// isAtomAlias reports whether alias is the predeclared type atom
+// (GOEXPERIMENT=uniontypes), which is not represented in the IR.
+func isAtomAlias(alias *types2.Alias) bool {
+	obj := alias.Obj()
+	return obj.Pkg() == nil && obj.Name() == "atom"
+}
+
 func isGlobal(obj types2.Object) bool {
 	return obj.Parent() == obj.Pkg().Scope()
 }

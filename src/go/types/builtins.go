@@ -1071,6 +1071,13 @@ func (check *Checker) hasVarSize(t Type) bool {
 			}
 		}
 
+	case *Sum:
+		for _, v := range t.variants {
+			if check.hasVarSize(v.typ) {
+				return true
+			}
+		}
+
 	case *TypeParam:
 		return true
 	}

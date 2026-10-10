@@ -1050,6 +1050,10 @@ func (p *printer) expr1(expr ast.Expr, prec1, depth int) {
 		p.print(token.STRUCT)
 		p.fieldList(x.Fields, true, x.Incomplete)
 
+	case *ast.UnionType:
+		p.print(&ast.Ident{NamePos: x.Union, Name: "union"})
+		p.fieldList(x.Variants, true, x.Incomplete)
+
 	case *ast.FuncType:
 		p.print(token.FUNC)
 		p.signature(x)
@@ -1505,6 +1509,25 @@ func (p *printer) stmt(stmt ast.Stmt, nextIsRBrace bool) {
 		}
 		p.print(blank)
 		p.stmt(s.Assign, false)
+		p.print(blank)
+		p.block(s.Body, 0)
+
+	case *ast.UnionSwitchStmt:
+		p.print(token.SWITCH)
+		if s.Init != nil {
+			p.print(blank)
+			p.stmt(s.Init, false)
+			p.print(token.SEMICOLON)
+		}
+		p.print(blank)
+		if s.Lhs != nil {
+			p.expr(s.Lhs)
+			p.print(blank, token.DEFINE, blank)
+		}
+		p.expr1(s.X, token.HighestPrec, 1)
+		p.print(token.PERIOD, token.LPAREN, &ast.Ident{Name: "union"})
+		p.setPos(s.Rparen)
+		p.print(token.RPAREN)
 		p.print(blank)
 		p.block(s.Body, 0)
 

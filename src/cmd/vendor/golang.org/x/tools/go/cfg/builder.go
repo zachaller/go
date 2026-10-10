@@ -110,6 +110,9 @@ start:
 	case *ast.TypeSwitchStmt:
 		b.typeSwitchStmt(s, label)
 
+	case *ast.UnionSwitchStmt:
+		b.unionSwitchStmt(s, label)
+
 	case *ast.SelectStmt:
 		b.selectStmt(s, label)
 
@@ -273,6 +276,45 @@ func (b *builder) typeSwitchStmt(s *ast.TypeSwitchStmt, label *lblock) {
 			// This block logically contains a type assertion,
 			// x.(casetype), but it's unclear how to represent x.
 			_ = casetype
+			b.ifelse(body, next)
+			b.current = next
+		}
+		b.current = body
+		b.typeCaseBody(cc, done)
+		b.current = next
+	}
+	if default_ != nil {
+		b.typeCaseBody(default_, done)
+	} else {
+		b.jump(done)
+	}
+	b.current = done
+}
+
+// unionSwitchStmt builds the CFG of a union switch
+// (Go fork addition; GOEXPERIMENT=uniontypes).
+func (b *builder) unionSwitchStmt(s *ast.UnionSwitchStmt, label *lblock) {
+	if s.Init != nil {
+		b.stmt(s.Init)
+	}
+	b.add(s.X)
+
+	done := b.newBlock(KindSwitchDone, s)
+	if label != nil {
+		label._break = done
+	}
+	var default_ *ast.CaseClause
+	for _, clause := range s.Body.List {
+		cc := clause.(*ast.CaseClause)
+		if cc.List == nil {
+			default_ = cc
+			continue
+		}
+		body := b.newBlock(KindSwitchCaseBody, cc)
+		var next *Block
+		for range cc.List {
+			// The case list names variants; don't call b.add.
+			next = b.newBlock(KindSwitchNextCase, cc)
 			b.ifelse(body, next)
 			b.current = next
 		}

@@ -643,6 +643,23 @@ func (check *Checker) collectMethods(obj *TypeName) {
 }
 
 func (check *Checker) checkFieldUniqueness(base *Named) {
+	if t, _ := base.Underlying().(*Sum); t != nil {
+		var mset objset
+		for i := 0; i < base.NumMethods(); i++ {
+			mset.insert(base.Method(i))
+		}
+		for _, v := range t.variants {
+			if v.name != "_" {
+				if alt := mset.insert(v); alt != nil {
+					err := check.newError(DuplicateFieldAndMethod)
+					err.addf(alt, "union variant and method with the same name %s", v.name)
+					err.addAltDecl(v)
+					err.report()
+				}
+			}
+		}
+		return
+	}
 	if t, _ := base.Underlying().(*Struct); t != nil {
 		var mset objset
 		for i := 0; i < base.NumMethods(); i++ {

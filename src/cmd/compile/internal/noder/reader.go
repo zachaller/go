@@ -159,6 +159,10 @@ type reader struct {
 
 	// Label to return to.
 	retlabel *types.Sym
+
+	// unionTmp holds the temporary for the union value of a pending
+	// exprUnionGet, to be used by the following exprUnionGetOk.
+	unionTmp *ir.Name
 }
 
 // A readerDict represents an instantiated "compile-time dictionary,"
@@ -536,6 +540,8 @@ func (r *reader) doTyp() *types.Type {
 		return r.interfaceType()
 	case pkgbits.TypeUnion:
 		return r.unionType()
+	case pkgbits.TypeSum:
+		return r.sumType()
 	}
 }
 
@@ -1875,6 +1881,9 @@ func (r *reader) stmt1(tag codeStmt, out *ir.Nodes) ir.Node {
 
 	case stmtSwitch:
 		return r.switchStmt(label)
+
+	case stmtUnionSwitch:
+		return r.unionSwitchStmt(label)
 	}
 }
 
@@ -2553,6 +2562,9 @@ func (r *reader) expr() (res ir.Node) {
 		}
 
 		return ir.NewUintptr(pos, offset)
+
+	case exprUnionLit, exprUnionIs, exprUnionGet, exprUnionGetOk:
+		return r.unionExpr(tag)
 
 	case exprReshape:
 		typ := r.typ()
@@ -3610,10 +3622,20 @@ func (r *reader) doPkgInitOrder(initOrder []ir.Node) []ir.Node {
 		for j := range lhs {
 			lhs[j] = r.obj()
 		}
-		rhs := r.expr()
 		pos := lhs[0].Pos()
 
 		var as ir.Node
+		if r.Bool() {
+			// var v, ok = u.V (union variant selector)
+			as = typecheck.Stmt(r.curfn, ir.NewAssignListStmt(pos, ir.OAS2, lhs, r.multiExpr()))
+			for _, v := range lhs {
+				v.(*ir.Name).Defn = as
+			}
+			initOrder[i] = as
+			continue
+		}
+		rhs := r.expr()
+
 		if len(lhs) == 1 {
 			as = typecheck.Stmt(r.curfn, ir.NewAssignStmt(pos, lhs[0], rhs))
 		} else {

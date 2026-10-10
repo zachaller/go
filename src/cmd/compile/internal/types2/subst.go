@@ -136,6 +136,13 @@ func (subst *subster) typ(typ Type) Type {
 			return s
 		}
 
+	case *Sum:
+		if variants := substList(t.variants, subst.var_); variants != nil {
+			s := &Sum{variants: variants}
+			s.markComplete()
+			return s
+		}
+
 	case *Pointer:
 		base := subst.typ(t.base)
 		if base != t.base {
